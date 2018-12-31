@@ -3,12 +3,14 @@
 
 const rollup = require('rollup');
 const nodeResolve = require('rollup-plugin-node-resolve');
+const commonjs = require('rollup-plugin-commonjs');
 const sourcemaps = require('rollup-plugin-sourcemaps');
+const replace = require('rollup-plugin-replace');
 const isBuiltinModule = require('is-builtin-module');
 const path = require('path');
 const fs = require('fs');
 
-const DEBUG = false;
+const DEBUG = true;
 
 const moduleMappings = TMPL_module_mappings;
 const workspaceName = 'TMPL_workspace_name';
@@ -161,11 +163,12 @@ const config = {
     // types of warning should always be ignored under bazel.
     throw new Error(warning.message);
   },
-  plugins: [TMPL_additional_plugins].concat([
+  plugins: [TMPL_replace_plugin].concat([TMPL_additional_plugins]).concat([
     {resolveId: resolveBazel},
     nodeResolve(
-        {jsnext: true, module: true, customResolveOptions: {moduleDirectory: nodeModulesRoot}}),
+        {jsnext: true, module: true, modulesOnly: true, customResolveOptions: {moduleDirectory: nodeModulesRoot}}),
     {resolveId: notResolved},
+    commonjs({include: `${nodeModulesRoot}/**`}),
     sourcemaps(),
   ]),
   output: {

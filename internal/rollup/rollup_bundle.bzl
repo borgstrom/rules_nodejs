@@ -109,6 +109,12 @@ def write_rollup_config(ctx, plugins = [], root_dir = None, filename = "_%s.roll
             "node_modules",
         ] if f])
 
+    replace_plugin = ""
+    if ctx.attr.replace:
+        replace_plugin = "replace({%s})" % ", ".join([
+            "%s: %s" % (k, ctx.attr.replace[k]) for k in ctx.attr.replace
+        ])
+
     ctx.actions.expand_template(
         output = config,
         template = ctx.file._rollup_config_tmpl,
@@ -125,6 +131,7 @@ def write_rollup_config(ctx, plugins = [], root_dir = None, filename = "_%s.roll
             "TMPL_stamp_data": "\"%s\"" % ctx.version_file.path if ctx.version_file else "undefined",
             "TMPL_target": str(ctx.label),
             "TMPL_workspace_name": ctx.workspace_name,
+            "TMPL_replace_plugin": replace_plugin,
         },
     )
 
@@ -593,6 +600,25 @@ ROLLUP_ATTRS = {
     "deps": attr.label_list(
         doc = """Other rules that produce JavaScript outputs, such as `ts_library`.""",
         aspects = ROLLUP_DEPS_ASPECTS,
+    ),
+    "replace": attr.string_dict(
+        doc = """Replaces the keys with the values via rollup-plugin-replace.
+
+        It is your responsibility to quote both the key and the value correctly
+        such that they are valid javascript.
+
+        ```
+        rollup_bundle(
+            name = "bundle",
+            ...
+            replace = {
+                "'process.env.NODE_ENV'": "JSON.stringify('production')",
+            }
+            ...
+        )
+        ```
+        """,
+        default = {},
     ),
     "_no_explore_html": attr.label(
         default = Label("@build_bazel_rules_nodejs//internal/rollup:no_explore.html"),
